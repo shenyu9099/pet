@@ -43,7 +43,7 @@
 - **Azure AI Search** - 智能搜索引擎
 - **Azure Computer Vision** - AI 图像识别
 - **Azure Event Grid** - 事件驱动架构
-- **Application Insights** - 应用监控
+- **Application Insights** - 应用监控和日志记录 📊
 
 ### 架构图
 
@@ -94,6 +94,7 @@ PetMoments/
 │   ├── config.js           # API 配置
 │   ├── auth.js             # 用户认证
 │   ├── api.js              # API 调用封装
+│   ├── logger.js           # Application Insights 日志记录
 │   ├── app.js              # 首页逻辑
 │   └── search.js           # 搜索页逻辑
 │
@@ -105,8 +106,9 @@ PetMoments/
 │   ├── create-moment.json  # 创建日记
 │   └── ...                 # 其他 Logic Apps
 │
-├── DEPLOYMENT_GUIDE.md     # 完整部署指南 ⭐
-└── README.md               # 本文件
+├── DEPLOYMENT_GUIDE.md          # 完整部署指南 ⭐
+├── APPLICATION_INSIGHTS_GUIDE.md # Application Insights 使用指南 📊
+└── README.md                    # 本文件
 ```
 
 ---
@@ -255,6 +257,16 @@ https://petmomentsstorage.z33.web.core.windows.net/
 - ✅ Event Grid 集成
 - ✅ 照片上传 → 触发 AI 标记
 - ✅ 日记创建 → 更新搜索索引
+
+### 6. 应用监控 📊
+- ✅ **Application Insights 集成**
+  - 自动记录所有 API 请求
+  - 记录请求耗时和响应状态
+  - 追踪用户行为（登录、注册、登出）
+  - 自动捕获错误和异常
+  - 页面浏览量统计
+  - 实时性能监控
+  - 详细使用指南: [APPLICATION_INSIGHTS_GUIDE.md](APPLICATION_INSIGHTS_GUIDE.md)
 
 ---
 

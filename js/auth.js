@@ -27,6 +27,17 @@ export async function login(email, password) {
 
         if (response && response.success) {
             localStorage.setItem('petmoments_user', JSON.stringify(response.user));
+            
+            // Set user ID in Application Insights logger
+            if (window.AppInsightsLogger && response.user.userId) {
+                window.AppInsightsLogger.setUserId(response.user.userId);
+                // Log login event
+                window.AppInsightsLogger.logEvent('UserLogin', {
+                    email: email,
+                    userId: response.user.userId
+                });
+            }
+            
             return { success: true, user: response.user };
         } else {
             return { success: false, error: response.error || 'Login failed' };
@@ -46,6 +57,14 @@ export async function register(name, email, password) {
         });
 
         if (response && response.success) {
+            // Log registration event
+            if (window.AppInsightsLogger) {
+                window.AppInsightsLogger.logEvent('UserRegistration', {
+                    email: email,
+                    userId: response.userId
+                });
+            }
+            
             return { success: true, userId: response.userId };
         } else {
             return { success: false, error: response.error || 'Registration failed' };
@@ -58,6 +77,16 @@ export async function register(name, email, password) {
 
 // Logout user
 export function logout() {
+    // Log logout event before clearing data
+    if (window.AppInsightsLogger) {
+        const user = getCurrentUser();
+        if (user) {
+            window.AppInsightsLogger.logEvent('UserLogout', {
+                userId: user.userId
+            });
+        }
+    }
+    
     localStorage.removeItem('petmoments_user');
 }
 
