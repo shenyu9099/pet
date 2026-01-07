@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moment Detail - PetMoments</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .detail-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: var(--white);
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .detail-image {
+            width: 100%;
+            max-height: 500px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .detail-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--black);
+        }
+
+        .detail-meta {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            color: var(--medium-gray);
+            flex-wrap: wrap;
+        }
+
+        .detail-description {
+            line-height: 1.8;
+            color: var(--dark-gray);
+            margin-bottom: 2rem;
+        }
+
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .photo-item {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .photo-item:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                🐾 PetMoments
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="my-pets.html">My Pets</a>
+                <a href="search.html">Search</a>
+                <span id="welcomeText" style="color: var(--white); margin-right: 1rem;"></span>
+                <button id="loginBtn" class="btn-primary">Login</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Moment Detail -->
+    <div class="detail-container">
+        <div id="detailContent">
+            <div class="loading">Loading moment...</div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Moment</h2>
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="editTitle">Title *</label>
+                    <input type="text" id="editTitle" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="editDescription">Description</label>
+                    <textarea id="editDescription" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editScene">Scene</label>
+                    <select id="editScene">
+                        <option value="">Select scene</option>
+                        <option value="playing">Playing</option>
+                        <option value="sleeping">Sleeping</option>
+                        <option value="eating">Eating</option>
+                        <option value="outdoor">Outdoor</option>
+                        <option value="training">Training</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div id="editMessage"></div>
+                <button type="submit" class="btn-primary" style="width: 100%;">
+                    💾 Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { API_ENDPOINTS } from './js/config.js';
+        import { checkAuth, getCurrentUser, logout } from './js/auth.js';
+        import { apiCall } from './js/api.js';
+
+        // Initialize
+        const loginBtn = document.getElementById('loginBtn');
+        const welcomeText = document.getElementById('welcomeText');
+        
+        if (checkAuth()) {
+            const user = getCurrentUser();
+            welcomeText.textContent = `Welcome, ${user.username || 'User'}! 👋`;
+            loginBtn.textContent = 'Logout';
+            loginBtn.onclick = () => {
+                logout();
+                location.href = 'index.html';
+            };
+        } else {
+            welcomeText.style.display = 'none';
+            loginBtn.onclick = () => location.href = 'login.html';
+        }
+
+        // Get moment ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const momentId = urlParams.get('id');
+        const userId = urlParams.get('userId');
+
+        if (momentId && userId) {
+            loadMomentDetail(momentId, userId);
+        } else {
+            document.getElementById('detailContent').innerHTML = 
+                '<div class="error-message">Invalid moment ID.</div>';
+        }
+
+        async function loadMomentDetail(id, uid) {
+            try {
+                const url = `${API_ENDPOINTS.MOMENTS.GET_BY_ID}&id=${id}&userId=${uid}`;
+                const response = await apiCall(url, { method: 'GET' });
+
+                if (response && response.success && response.data) {
+                    displayMoment(response.data);
+                } else {
+                    document.getElementById('detailContent').innerHTML = 
+                        '<div class="error-message">Moment not found.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading moment:', error);
+                document.getElementById('detailContent').innerHTML = 
+                    '<div class="error-message">Failed to load moment.</div>';
+            }
+        }
+
+        function displayMoment(moment) {
+            const container = document.getElementById('detailContent');
+            const currentUser = getCurrentUser();
+            const isOwner = currentUser && currentUser.userId === moment.userId;
+
+            const coverImage = moment.coverImage || 'https://via.placeholder.com/900x500?text=No+Image';
+
+            let html = `
+                ${moment.coverImage ? `<img src="${coverImage}" alt="${escapeHtml(moment.title)}" class="detail-image" onerror="this.src='https://via.placeholder.com/900x500?text=No+Image'">` : ''}
+                
+                <h1 class="detail-title">${escapeHtml(moment.title)}</h1>
+                
+                <div class="detail-meta">
+                    <span><strong>Pet:</strong> 🐾 ${escapeHtml(moment.petName || 'Unknown')}</span>
+                    <span><strong>Scene:</strong> ${escapeHtml(moment.scene || 'N/A')}</span>
+                    <span><strong>Date:</strong> ${formatDate(moment.createdAt)}</span>
+                </div>
+
+                <div class="detail-description">
+                    ${escapeHtml(moment.description || 'No description provided.')}
+                </div>
+            `;
+
+            if (isOwner) {
+                html += `
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                        <button onclick="editMoment('${moment.id}', '${moment.userId}')" 
+                            class="btn-primary">
+                            ✏️ Edit Moment
+                        </button>
+                        <button onclick="deleteMoment('${moment.id}', '${moment.userId}')" 
+                            class="btn-secondary" style="background-color: #fee; color: #c00; border-color: #fcc;">
+                            🗑️ Delete Moment
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (moment.media && moment.media.photos && moment.media.photos.length > 0) {
+                html += '<h3 style="margin-top: 2rem;">Additional Photos</h3>';
+                html += '<div class="photos-grid">';
+                moment.media.photos.forEach(photo => {
+                    html += `<img src="${photo.url}" class="photo-item" alt="${photo.caption || 'Photo'}" onclick="window.open('${photo.url}', '_blank')">`;
+                });
+                html += '</div>';
+            }
+
+            if (moment.media && moment.media.videos && moment.media.videos.length > 0) {
+                html += '<h3 style="margin-top: 2rem;">Videos 🎬</h3>';
+                html += '<div class="photos-grid">';
+                moment.media.videos.forEach(video => {
+                    html += `
+                        <video controls class="photo-item" style="height: auto;">
+                            <source src="${video.url}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        let currentMoment = null;
+
+        window.editMoment = function(id, uid) {
+            // Store current moment data
+            currentMoment = { id, uid };
+            
+            // Populate form with current values
+            document.getElementById('editTitle').value = document.querySelector('.detail-title').textContent;
+            document.getElementById('editDescription').value = document.querySelector('.detail-description').textContent.trim();
+            
+            // Try to get scene from meta
+            const metaElements = document.querySelectorAll('.detail-meta span');
+            let currentScene = '';
+            metaElements.forEach(span => {
+                if (span.innerHTML.includes('Scene:')) {
+                    currentScene = span.textContent.replace('Scene:', '').trim();
+                }
+            });
+            document.getElementById('editScene').value = currentScene.toLowerCase();
+            
+            // Show modal
+            document.getElementById('editModal').classList.add('active');
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById('editModal').classList.remove('active');
+            document.getElementById('editForm').reset();
+            document.getElementById('editMessage').innerHTML = '';
+        };
+
+        // Handle edit form submission
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!currentMoment) return;
+            
+            const editMessage = document.getElementById('editMessage');
+            editMessage.innerHTML = '<div class="loading">Updating moment...</div>';
+
+            try {
+                const response = await apiCall(API_ENDPOINTS.MOMENTS.UPDATE, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        id: currentMoment.id,
+                        userId: currentMoment.uid,
+                        title: document.getElementById('editTitle').value,
+                        description: document.getElementById('editDescription').value || '',
+                        scene: document.getElementById('editScene').value || ''
+                    })
+                });
+
+                if (response && response.success) {
+                    editMessage.innerHTML = '<div class="success-message">Moment updated successfully!</div>';
+                    setTimeout(() => {
+                        closeEditModal();
+                        location.reload();
+                    }, 1000);
+                } else {
+                    editMessage.innerHTML = '<div class="error-message">Failed to update moment.</div>';
+                }
+            } catch (error) {
+                console.error('Error updating moment:', error);
+                editMessage.innerHTML = '<div class="error-message">Network error. Please try again.</div>';
+            }
+        });
+
+        window.deleteMoment = async function(id, uid) {
+            if (!confirm('Are you sure you want to delete this moment?')) {
+                return;
+            }
+
+            try {
+                const url = `${API_ENDPOINTS.MOMENTS.DELETE}&id=${id}&userId=${uid}`;
+                const response = await apiCall(url, { method: 'DELETE' });
+
+                if (response && response.success) {
+                    alert('Moment deleted successfully!');
+                    location.href = 'index.html';
+                } else {
+                    alert('Failed to delete moment.');
+                }
+            } catch (error) {
+                console.error('Error deleting moment:', error);
+                alert('Network error. Please try again.');
+            }
+        };
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown date';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
+

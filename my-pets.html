@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Pets - PetMoments</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                🐾 PetMoments
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="my-pets.html">My Pets</a>
+                <a href="search.html">Search</a>
+                <span id="welcomeText" style="color: var(--white); margin-right: 1rem;"></span>
+                <button id="loginBtn" class="btn-primary">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="hero" style="padding: 2rem 0;">
+        <div class="container">
+            <h1>My Pets</h1>
+            <p>Manage your pet profiles</p>
+            <button class="btn-large" onclick="showAddPetModal()">
+                ➕ Add New Pet
+            </button>
+        </div>
+    </section>
+
+    <!-- Pets Grid -->
+    <section class="moments-section">
+        <div class="container">
+            <div id="petsContainer" class="moments-grid">
+                <div class="loading">Loading your pets...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Add Pet Modal -->
+    <div id="addPetModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeAddPetModal()">&times;</span>
+            <h2>Add New Pet</h2>
+            
+            <div id="modalMessage"></div>
+
+            <form id="addPetForm">
+                <div class="form-group">
+                    <label for="petName">Pet Name *</label>
+                    <input type="text" id="petName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="species">Species *</label>
+                    <select id="species" required>
+                        <option value="">Select species</option>
+                        <option value="dog">Dog</option>
+                        <option value="cat">Cat</option>
+                        <option value="bird">Bird</option>
+                        <option value="rabbit">Rabbit</option>
+                        <option value="hamster">Hamster</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="breed">Breed</label>
+                    <input type="text" id="breed">
+                </div>
+
+                <div class="form-group">
+                    <label for="birthDate">Birth Date</label>
+                    <input type="date" id="birthDate">
+                </div>
+
+                <div class="form-group">
+                    <label for="avatar">Avatar (Optional)</label>
+                    <input type="file" id="avatar" accept="image/*">
+                    <small style="color: var(--medium-gray);">Upload a photo of your pet</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" rows="3"></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%;">Add Pet</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { API_ENDPOINTS } from './js/config.js';
+        import { requireAuth, getCurrentUser, logout } from './js/auth.js';
+        import { apiCall, fileToBase64, getFileExtension } from './js/api.js';
+
+        // Check authentication
+        if (!requireAuth()) {
+            // Will redirect to login
+        }
+
+        // Initialize
+        const user = getCurrentUser();
+        const welcomeText = document.getElementById('welcomeText');
+        if (user && welcomeText) {
+            welcomeText.textContent = `Welcome, ${user.username || 'User'}! 👋`;
+        }
+        
+        document.getElementById('loginBtn').onclick = () => {
+            logout();
+            location.href = 'index.html';
+        };
+
+        loadMyPets();
+
+        // Load user's pets
+        async function loadMyPets() {
+            const container = document.getElementById('petsContainer');
+            const user = getCurrentUser();
+
+            try {
+                const url = `${API_ENDPOINTS.PETS.GET_MY_PETS}&userId=${user.userId}`;
+                const response = await apiCall(url, { method: 'GET' });
+
+                if (response && response.pets && response.pets.length > 0) {
+                    container.innerHTML = '';
+                    response.pets.forEach(pet => {
+                        container.appendChild(createPetCard(pet));
+                    });
+                } else {
+                    container.innerHTML = '<div class="loading">No pets yet. Add your first pet!</div>';
+                }
+            } catch (error) {
+                console.error('Error loading pets:', error);
+                container.innerHTML = '<div class="error-message">Failed to load pets.</div>';
+            }
+        }
+
+        // Create pet card
+        function createPetCard(pet) {
+            const card = document.createElement('div');
+            card.className = 'moment-card';
+
+            const speciesEmoji = {
+                'dog': '🐕',
+                'cat': '🐈',
+                'bird': '🐦',
+                'rabbit': '🐰',
+                'hamster': '🐹',
+                'other': '🐾'
+            };
+
+            // Display avatar image if available, otherwise show emoji
+            const avatarDisplay = pet.avatar && pet.avatar.trim() !== '' 
+                ? `<img src="${pet.avatar}" alt="${pet.petName}" style="width: 150px; height: 150px; object-fit: cover; border-radius: 50%; margin-bottom: 1rem;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                   <div style="font-size: 4rem; margin-bottom: 1rem; display: none;">${speciesEmoji[pet.species] || '🐾'}</div>`
+                : `<div style="font-size: 4rem; margin-bottom: 1rem;">${speciesEmoji[pet.species] || '🐾'}</div>`;
+
+            card.innerHTML = `
+                <div style="padding: 2rem; text-align: center;">
+                    ${avatarDisplay}
+                    <h3 class="moment-title">${pet.petName || 'Unnamed Pet'}</h3>
+                    <p class="moment-description">${pet.breed || pet.species}</p>
+                    ${pet.birthDate ? `<p style="color: var(--medium-gray); font-size: 0.9rem;">🎂 ${pet.birthDate}</p>` : ''}
+                    <p style="color: var(--medium-gray); font-size: 0.9rem;">
+                        ${pet.bio || pet.description || 'No description'}
+                    </p>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Show add pet modal
+        window.showAddPetModal = function() {
+            document.getElementById('addPetModal').classList.add('active');
+        };
+
+        // Close add pet modal
+        window.closeAddPetModal = function() {
+            document.getElementById('addPetModal').classList.remove('active');
+            document.getElementById('addPetForm').reset();
+            document.getElementById('modalMessage').innerHTML = '';
+        };
+
+        // Handle add pet form
+        document.getElementById('addPetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const user = getCurrentUser();
+            const modalMessage = document.getElementById('modalMessage');
+
+            modalMessage.innerHTML = '<div class="loading">Adding pet...</div>';
+
+            const petData = {
+                userId: user.userId,
+                petName: document.getElementById('petName').value,
+                species: document.getElementById('species').value,
+                breed: document.getElementById('breed').value || '',
+                birthDate: document.getElementById('birthDate').value || '',
+                bio: document.getElementById('description').value || '',
+                avatar: null,
+                age: 0
+            };
+
+            // Handle avatar upload
+            const avatarFile = document.getElementById('avatar').files[0];
+            if (avatarFile) {
+                try {
+                    const base64 = await fileToBase64(avatarFile);
+                    petData.avatar = {
+                        fileName: avatarFile.name,
+                        fileExtension: getFileExtension(avatarFile.name),
+                        base64Content: base64
+                    };
+                } catch (error) {
+                    console.error('Error converting avatar:', error);
+                }
+            }
+
+            try {
+                const response = await apiCall(API_ENDPOINTS.PETS.CREATE, {
+                    method: 'POST',
+                    body: JSON.stringify(petData)
+                });
+
+                if (response && response.success) {
+                    modalMessage.innerHTML = '<div class="success-message">Pet added successfully!</div>';
+                    setTimeout(() => {
+                        closeAddPetModal();
+                        loadMyPets();
+                    }, 1000);
+                } else {
+                    modalMessage.innerHTML = '<div class="error-message">Failed to add pet.</div>';
+                }
+            } catch (error) {
+                console.error('Error adding pet:', error);
+                modalMessage.innerHTML = '<div class="error-message">Network error. Please try again.</div>';
+            }
+        });
+    </script>
+</body>
+</html>
+

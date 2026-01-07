@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search - PetMoments</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                🐾 PetMoments
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="my-pets.html">My Pets</a>
+                <a href="search.html">Search</a>
+                <span id="welcomeText" style="color: var(--white); margin-right: 1rem;"></span>
+                <button id="loginBtn" class="btn-primary">Login</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Search Section -->
+    <section class="hero" style="padding: 2rem 0;">
+        <div class="container">
+            <h1>Search Pet Moments</h1>
+            <p>Find moments by pet name, species, or scene</p>
+            
+            <div style="max-width: 600px; margin: 2rem auto;">
+                <input type="text" id="searchInput" placeholder="Search..." 
+                    style="width: 100%; padding: 1rem; border: 2px solid var(--light-gray); border-radius: 8px; font-size: 1.1rem;">
+                
+                <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
+                    <select id="speciesFilter" style="flex: 1; padding: 0.75rem; border: 2px solid var(--light-gray); border-radius: 5px;">
+                        <option value="">All Species</option>
+                        <option value="dog">Dog</option>
+                        <option value="cat">Cat</option>
+                        <option value="bird">Bird</option>
+                        <option value="rabbit">Rabbit</option>
+                        <option value="hamster">Hamster</option>
+                        <option value="other">Other</option>
+                    </select>
+
+                    <select id="sceneFilter" style="flex: 1; padding: 0.75rem; border: 2px solid var(--light-gray); border-radius: 5px;">
+                        <option value="">All Scenes</option>
+                        <option value="playing">Playing</option>
+                        <option value="sleeping">Sleeping</option>
+                        <option value="eating">Eating</option>
+                        <option value="outdoor">Outdoor</option>
+                        <option value="training">Training</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search Results -->
+    <section class="moments-section">
+        <div class="container">
+            <h2 id="resultsTitle">All Moments</h2>
+            <div id="resultsContainer" class="moments-grid">
+                <div class="loading">Loading moments...</div>
+            </div>
+        </div>
+    </section>
+
+    <script type="module">
+        import { API_ENDPOINTS } from './js/config.js';
+        import { checkAuth, logout } from './js/auth.js';
+        import { apiCall } from './js/api.js';
+
+        let allMoments = [];
+
+        // Initialize
+        const loginBtn = document.getElementById('loginBtn');
+        const welcomeText = document.getElementById('welcomeText');
+        
+        if (checkAuth()) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (user) {
+                welcomeText.textContent = `Welcome, ${user.username || 'User'}! 👋`;
+            }
+            loginBtn.textContent = 'Logout';
+            loginBtn.onclick = () => {
+                logout();
+                location.reload();
+            };
+        } else {
+            welcomeText.style.display = 'none';
+            loginBtn.onclick = () => location.href = 'login.html';
+        }
+
+        // Load all moments
+        loadAllMoments();
+
+        // Search and filter listeners
+        document.getElementById('searchInput').addEventListener('input', filterMoments);
+        document.getElementById('speciesFilter').addEventListener('change', filterMoments);
+        document.getElementById('sceneFilter').addEventListener('change', filterMoments);
+
+        async function loadAllMoments() {
+            try {
+                const response = await apiCall(API_ENDPOINTS.MOMENTS.GET_ALL, {
+                    method: 'GET'
+                });
+
+                if (response && response.moments) {
+                    // Sort moments by timestamp (newest first)
+                    allMoments = response.moments.sort((a, b) => {
+                        const timeA = a._ts || a.createdAt || 0;
+                        const timeB = b._ts || b.createdAt || 0;
+                        return timeB - timeA;
+                    });
+                    displayMoments(allMoments);
+                } else {
+                    document.getElementById('resultsContainer').innerHTML = 
+                        '<div class="loading">No moments found.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading moments:', error);
+                document.getElementById('resultsContainer').innerHTML = 
+                    '<div class="error-message">Failed to load moments.</div>';
+            }
+        }
+
+        function filterMoments() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const speciesFilter = document.getElementById('speciesFilter').value;
+            const sceneFilter = document.getElementById('sceneFilter').value;
+
+            const filtered = allMoments.filter(moment => {
+                const matchesSearch = !searchTerm || 
+                    moment.title.toLowerCase().includes(searchTerm) ||
+                    (moment.description && moment.description.toLowerCase().includes(searchTerm)) ||
+                    (moment.petName && moment.petName.toLowerCase().includes(searchTerm));
+
+                const matchesSpecies = !speciesFilter || moment.species === speciesFilter;
+                const matchesScene = !sceneFilter || moment.scene === sceneFilter;
+
+                return matchesSearch && matchesSpecies && matchesScene;
+            });
+
+            document.getElementById('resultsTitle').textContent = 
+                `${filtered.length} Moment${filtered.length !== 1 ? 's' : ''} Found`;
+            
+            displayMoments(filtered);
+        }
+
+        function displayMoments(moments) {
+            const container = document.getElementById('resultsContainer');
+
+            if (moments.length === 0) {
+                container.innerHTML = '<div class="loading">No moments match your search.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            moments.forEach(moment => {
+                container.appendChild(createMomentCard(moment));
+            });
+        }
+
+        function createMomentCard(moment) {
+            const card = document.createElement('div');
+            card.className = 'moment-card';
+            card.onclick = () => viewMomentDetail(moment.id, moment.userId);
+
+            const coverImage = moment.coverImage || 'https://via.placeholder.com/300x250?text=No+Image';
+            
+            card.innerHTML = `
+                <img src="${coverImage}" alt="${escapeHtml(moment.title)}" class="moment-image" 
+                    onerror="this.src='https://via.placeholder.com/300x250?text=No+Image'">
+                <div class="moment-content">
+                    <h3 class="moment-title">${escapeHtml(moment.title)}</h3>
+                    <p class="moment-description">${escapeHtml(moment.description || 'No description')}</p>
+                    <div class="moment-meta">
+                        <span class="pet-name">🐾 ${escapeHtml(moment.petName || 'Unknown Pet')}</span>
+                        <span>${formatDate(moment.createdAt)}</span>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function viewMomentDetail(momentId, userId) {
+            location.href = `moment-detail.html?id=${momentId}&userId=${userId}`;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown date';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+/* ============================================
+   搜索页面专用样式
+   ============================================ */
+
+.search-hero {
+    background: linear-gradient(135deg, var(--azure-blue), var(--azure-light));
+    color: white;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.search-hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.search-hero p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.search-section {
+    padding: 40px 20px 80px;
+}
+
+/* 搜索框容器 */
+.search-box-container {
+    max-width: 800px;
+    margin: 0 auto 40px;
+    position: relative;
+}
+
+.search-box {
+    display: flex;
+    gap: 10px;
+    background: white;
+    padding: 10px;
+    border-radius: 50px;
+    box-shadow: var(--shadow-md);
+}
+
+.search-box input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 12px 24px;
+    font-size: 1.1rem;
+    background: transparent;
+}
+
+.search-btn {
+    background: var(--azure-blue);
+    color: white;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.search-btn:hover {
+    background: var(--azure-dark);
+    transform: scale(1.05);
+}
+
+/* 搜索建议 */
+.suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 15px;
+    box-shadow: var(--shadow-lg);
+    margin-top: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.suggestion-item {
+    padding: 15px 24px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-gray);
+    transition: background 0.2s;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: var(--bg-gray);
+}
+
+/* 筛选器 */
+.filters-container {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 40px;
+}
+
+.filter-group {
+    margin-bottom: 25px;
+}
+
+.filter-group:last-of-type {
+    margin-bottom: 20px;
+}
+
+.filter-group h3 {
+    color: var(--azure-blue);
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filter-btn {
+    background: var(--bg-gray);
+    color: var(--text-dark);
+    border: 2px solid transparent;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.filter-btn:hover {
+    background: var(--azure-light);
+    color: var(--azure-dark);
+}
+
+.filter-btn.active {
+    background: var(--azure-blue);
+    color: white;
+    border-color: var(--azure-dark);
+}
+
+/* 搜索结果 */
+.search-results {
+    min-height: 400px;
+}
+
+.search-placeholder {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.placeholder-icon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    opacity: 0.3;
+}
+
+.search-placeholder h3 {
+    color: var(--azure-blue);
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+}
+
+.search-placeholder p {
+    color: var(--text-gray);
+    font-size: 1.1rem;
+}
+
+.search-results-header {
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--azure-blue);
+}
+
+.search-results-header h2 {
+    color: var(--azure-blue);
+    font-size: 1.5rem;
+}
+
+.search-results-header .result-count {
+    color: var(--text-gray);
+    font-size: 1rem;
+    margin-top: 5px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .search-hero h1 {
+        font-size: 1.8rem;
+    }
+    
+    .search-box {
+        flex-direction: column;
+        border-radius: 15px;
+    }
+    
+    .search-btn {
+        border-radius: 10px;
+    }
+    
+    .filters-container {
+        padding: 20px;
+    }
+    
+    .filter-buttons {
+        justify-content: center;
+    }
+}
+

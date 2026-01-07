@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Moment - PetMoments</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                🐾 PetMoments
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="my-pets.html">My Pets</a>
+                <a href="search.html">Search</a>
+                <span id="welcomeText" style="color: var(--white); margin-right: 1rem;"></span>
+                <button id="loginBtn" class="btn-primary">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Create Moment Form -->
+    <div class="form-container" style="max-width: 700px; margin-top: 2rem;">
+        <h2 style="text-align: center; margin-bottom: 2rem;">Create New Moment</h2>
+        
+        <div id="messageContainer"></div>
+
+        <form id="createMomentForm">
+            <div class="form-group">
+                <label for="petId">Select Pet *</label>
+                <select id="petId" required>
+                    <option value="">Loading pets...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="title">Title *</label>
+                <input type="text" id="title" required maxlength="100">
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" rows="4"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="scene">Scene</label>
+                <select id="scene">
+                    <option value="">Select scene</option>
+                    <option value="playing">Playing</option>
+                    <option value="sleeping">Sleeping</option>
+                    <option value="eating">Eating</option>
+                    <option value="outdoor">Outdoor</option>
+                    <option value="training">Training</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="coverImage">Cover Image</label>
+                <input type="file" id="coverImage" accept="image/*">
+                <small style="color: var(--medium-gray);">Optional: Main image for this moment</small>
+            </div>
+
+            <div class="form-group">
+                <label for="photos">Additional Photos</label>
+                <input type="file" id="photos" accept="image/*" multiple>
+                <small style="color: var(--medium-gray);">Optional: Multiple photos allowed</small>
+            </div>
+
+            <div class="form-group">
+                <label for="videos">Videos</label>
+                <input type="file" id="videos" accept="video/*" multiple>
+                <small style="color: var(--medium-gray);">Optional: Upload videos of your pet</small>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+                📷 Create Moment
+            </button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { API_ENDPOINTS } from './js/config.js';
+        import { requireAuth, getCurrentUser, logout } from './js/auth.js';
+        import { apiCall, fileToBase64, getFileExtension } from './js/api.js';
+
+        // Check authentication
+        if (!requireAuth()) {
+            // Will redirect to login
+        }
+
+        // Initialize
+        const user = getCurrentUser();
+        const welcomeText = document.getElementById('welcomeText');
+        if (user && welcomeText) {
+            welcomeText.textContent = `Welcome, ${user.username || 'User'}! 👋`;
+        }
+        
+        document.getElementById('loginBtn').onclick = () => {
+            logout();
+            location.href = 'index.html';
+        };
+
+        loadUserPets();
+
+        // Load user's pets for selection
+        async function loadUserPets() {
+            const petSelect = document.getElementById('petId');
+            const user = getCurrentUser();
+
+            try {
+                const url = `${API_ENDPOINTS.PETS.GET_MY_PETS}&userId=${user.userId}`;
+                const response = await apiCall(url, { method: 'GET' });
+
+                if (response && response.pets && response.pets.length > 0) {
+                    petSelect.innerHTML = '<option value="">Select a pet</option>';
+                    response.pets.forEach(pet => {
+                        const option = document.createElement('option');
+                        option.value = pet.id;
+                        option.textContent = `${pet.petName} (${pet.species})`;
+                        option.dataset.petName = pet.petName;
+                        option.dataset.species = pet.species;
+                        petSelect.appendChild(option);
+                    });
+                } else {
+                    petSelect.innerHTML = '<option value="">No pets found - Add a pet first</option>';
+                }
+            } catch (error) {
+                console.error('Error loading pets:', error);
+                petSelect.innerHTML = '<option value="">Error loading pets</option>';
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('createMomentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const user = getCurrentUser();
+            const messageContainer = document.getElementById('messageContainer');
+            const petSelect = document.getElementById('petId');
+            const selectedOption = petSelect.options[petSelect.selectedIndex];
+
+            if (!selectedOption.value) {
+                messageContainer.innerHTML = '<div class="error-message">Please select a pet.</div>';
+                return;
+            }
+
+            messageContainer.innerHTML = '<div class="loading">Creating moment... Please wait.</div>';
+
+            try {
+                // Prepare moment data
+                const momentData = {
+                    userId: user.userId,
+                    petId: selectedOption.value,
+                    petName: selectedOption.dataset.petName,
+                    species: selectedOption.dataset.species || '',
+                    title: document.getElementById('title').value,
+                    description: document.getElementById('description').value || '',
+                    scene: document.getElementById('scene').value || '',
+                    coverImageData: null,
+                    coverImageName: null,
+                    newMedia: {
+                        photos: [],
+                        videos: [],
+                        audio: []
+                    }
+                };
+
+                // Process cover image
+                const coverImageFile = document.getElementById('coverImage').files[0];
+                if (coverImageFile) {
+                    const base64 = await fileToBase64(coverImageFile);
+                    momentData.coverImageData = base64;
+                    momentData.coverImageName = coverImageFile.name;
+                }
+
+                // Process additional photos
+                const photoFiles = document.getElementById('photos').files;
+                for (let i = 0; i < photoFiles.length; i++) {
+                    const base64 = await fileToBase64(photoFiles[i]);
+                    momentData.newMedia.photos.push({
+                        fileName: photoFiles[i].name,
+                        fileContent: base64
+                    });
+                }
+
+                // Process videos
+                const videoFiles = document.getElementById('videos').files;
+                for (let i = 0; i < videoFiles.length; i++) {
+                    const base64 = await fileToBase64(videoFiles[i]);
+                    momentData.newMedia.videos.push({
+                        fileName: videoFiles[i].name,
+                        fileContent: base64
+                    });
+                }
+
+                // Call API
+                const response = await apiCall(API_ENDPOINTS.MOMENTS.CREATE, {
+                    method: 'POST',
+                    body: JSON.stringify(momentData)
+                });
+
+                if (response && response.success) {
+                    messageContainer.innerHTML = '<div class="success-message">Moment created successfully! Redirecting...</div>';
+                    setTimeout(() => {
+                        location.href = 'index.html';
+                    }, 1500);
+                } else {
+                    messageContainer.innerHTML = '<div class="error-message">Failed to create moment. Please try again.</div>';
+                }
+            } catch (error) {
+                console.error('Error creating moment:', error);
+                messageContainer.innerHTML = '<div class="error-message">Network error. Please try again.</div>';
+            }
+        });
+    </script>
+</body>
+</html>
+

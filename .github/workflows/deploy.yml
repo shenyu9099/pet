@@ -1,0 +1,49 @@
+name: Deploy PetMoments to Azure Static Website
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 部署到 Azure Blob Storage 静态网站
+      - name: Deploy to Azure Static Website
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az storage blob upload-batch \
+              --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              --destination '$web' \
+              --source . \
+              --pattern "*.html" \
+              --pattern "*.css" \
+              --pattern "*.js" \
+              --pattern "*.json" \
+              --overwrite
+            
+            # 上传 CSS 文件夹
+            az storage blob upload-batch \
+              --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              --destination '$web/css' \
+              --source ./css \
+              --overwrite
+            
+            # 上传 JS 文件夹
+            az storage blob upload-batch \
+              --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              --destination '$web/js' \
+              --source ./js \
+              --overwrite
+
+      - name: Deployment completed
+        run: echo "✅ PetMoments deployed successfully to Azure Static Website!"
+

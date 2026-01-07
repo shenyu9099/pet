@@ -1,0 +1,38 @@
+# Node modules
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+
+# Build output
+dist/
+build/
+
+# Temporary files
+*.tmp
+.cache/
+
+# Logic Apps (不需要上传到前端静态网站)
+logic-apps/
+
+# Documentation (可选，如果不想上传文档)
+# *.md
+# DEPLOYMENT_GUIDE.md
+# QUICK_START.md
+

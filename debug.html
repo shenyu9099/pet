@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - PetMoments</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">🐾 PetMoments - Debug</div>
+        </div>
+    </nav>
+
+    <div class="form-container" style="max-width: 800px;">
+        <h2>Debug Information</h2>
+        
+        <div style="margin: 2rem 0;">
+            <h3>Current User in localStorage:</h3>
+            <pre id="userInfo" style="background: #f5f5f5; padding: 1rem; border-radius: 5px; overflow-x: auto;"></pre>
+        </div>
+
+        <div style="margin: 2rem 0;">
+            <h3>Test Login API:</h3>
+            <form id="testLoginForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="testEmail" value="test@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="testPassword" value="password123">
+                </div>
+                <button type="submit" class="btn-primary">Test Login</button>
+            </form>
+            <div id="loginResult" style="margin-top: 1rem;"></div>
+        </div>
+
+        <div style="margin: 2rem 0;">
+            <h3>Test Get My Pets API:</h3>
+            <button onclick="testGetMyPets()" class="btn-secondary">Test Get My Pets</button>
+            <div id="petsResult" style="margin-top: 1rem;"></div>
+        </div>
+
+        <div style="margin: 2rem 0;">
+            <button onclick="clearStorage()" class="btn-secondary">Clear localStorage</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { API_ENDPOINTS } from './js/config.js';
+        import { getCurrentUser, login } from './js/auth.js';
+        import { apiCall } from './js/api.js';
+
+        // Display current user info
+        function displayUserInfo() {
+            const user = getCurrentUser();
+            document.getElementById('userInfo').textContent = user 
+                ? JSON.stringify(user, null, 2) 
+                : 'No user logged in';
+        }
+
+        displayUserInfo();
+
+        // Test login
+        document.getElementById('testLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            const resultDiv = document.getElementById('loginResult');
+
+            resultDiv.innerHTML = '<div class="loading">Testing login...</div>';
+
+            try {
+                const result = await login(email, password);
+                resultDiv.innerHTML = `
+                    <div class="${result.success ? 'success-message' : 'error-message'}">
+                        <strong>Result:</strong><br>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                displayUserInfo();
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        });
+
+        // Test get my pets
+        window.testGetMyPets = async function() {
+            const resultDiv = document.getElementById('petsResult');
+            const user = getCurrentUser();
+
+            if (!user || !user.userId) {
+                resultDiv.innerHTML = '<div class="error-message">No user logged in or userId is missing!</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="loading">Testing get my pets...</div>';
+
+            try {
+                const url = `${API_ENDPOINTS.PETS.GET_MY_PETS}&userId=${user.userId}`;
+                console.log('Request URL:', url);
+                
+                const response = await apiCall(url, { method: 'GET' });
+                
+                resultDiv.innerHTML = `
+                    <div class="success-message">
+                        <strong>Response:</strong><br>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        };
+
+        // Clear storage
+        window.clearStorage = function() {
+            localStorage.clear();
+            alert('localStorage cleared!');
+            displayUserInfo();
+        };
+    </script>
+</body>
+</html>
+
